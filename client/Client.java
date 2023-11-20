@@ -20,6 +20,9 @@ public class Client
 	private BufferedReader in = null;                 //in stream
 	private PrintWriter out = null;                   //out stream
 
+	private final int REQUESTS_AMT = 3;               //no. of requests
+	                                                  //to send
+
 	/* Constructor
 	 * ===========
 	 * Sets up the client with a given hostname and port.
@@ -75,6 +78,32 @@ public class Client
 					    true ); //flushing not buffered
 	}
 
+	/* sendRequests() : PRIVATE
+	 * ========================
+	 * Sends a number of requests to the server defined by REQUESTS_AMT.
+	 * Prints response to stdout.
+	 * Throws IOException on error.
+	 */
+	private void sendRequests() throws IOException
+	{
+		createIOStreams();
+
+		//send GET request to server
+                String request = "GET";
+		String response;
+		for ( int i = 0; i < REQUESTS_AMT; i++ )
+		{
+			out.println( request );
+			System.out.println( "Sent " + request + " to server." );
+
+			System.out.println( "Response: " );
+			response = in.readLine();
+			System.out.println( response );
+                }
+		in.close();
+		out.close();
+	}
+
 	/* makeRequest()
 	 * =============
 	 * Makes a request to the server and prints the reply given.
@@ -86,42 +115,23 @@ public class Client
 	{
                 System.out.println( "Trying to open socket to server..." );
 
+		//create socket to server
 	        createSocket();
 
+		//send multiple requests to server
 		try
 		{
-                        createIOStreams();
+		        sendRequests();
 		}
 		catch ( IOException ioe )
 		{
-                        throw new RuntimeException( "Failed to create streams!",
-				                    ioe );
-		}
-
-		//send GET request to server
-                String request = "GET";
-		out.println( request );
-		System.out.println( "Sent " + request + " to server." );
-
-		//print response from server
-		try
-		{
-			System.out.println( "Response: " );
-			String response = in.readLine();
-			System.out.println( response );
-                }
-		catch ( IOException ioe )
-		{
-                        throw new RuntimeException( "Failed to read response!"
-						    + ioe );
+		        throw new RuntimeException( "Failed to send request(s)!"
+				                    , ioe );
 		}
 
 		//clean up opened resources
 		try
 		{
-		        in.close();
-			out.close();
-			
 			this.socket.close();
 		}
 		catch ( IOException ioe )
