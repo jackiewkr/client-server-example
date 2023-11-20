@@ -1,6 +1,6 @@
 package server;
 
-//libraries for TCP/IP
+//libraries for sockets
 import java.io.*;
 import java.net.*;
 
@@ -9,7 +9,7 @@ import java.time.LocalTime;
 
 /* class Server
  * ============
- * Barebones server to show a simple single-threaded client-server model
+ * Simple server to show a simple single-threaded client-server model
  *
  * By Jacqueline W.
  */
