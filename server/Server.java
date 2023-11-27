@@ -67,6 +67,43 @@ public class Server
 					    true ); //flushing not buffered
 	}
 
+	/* processRequests()
+	 * =================
+	 * Creates IO streams and processes requests from client until the
+	 * socket is no longer connected, then closes the IO streams.
+	 */
+	private void processRequests() throws IOException
+	{
+		createIOStreams();
+
+		boolean keepRunning = true;
+		while ( keepRunning )
+		{
+			
+			//get request from client
+			String request = this.in.readLine();
+			
+			//check whether socket is still connected
+			if( request == null )
+			{
+			        keepRunning = false;
+			}
+			
+			System.out.println( "Got request from client " +
+					    request + " ." );
+
+
+			//send reply to client
+			String response = "You made a request to port "
+				          + port + " at " + LocalTime.now();
+			this.out.println( response );
+		}
+
+		//close in and out
+		this.in.close();
+		this.out.close();
+	}
+
 	/* serveRequest() : PRIVATE
 	 * ========================
 	 * Serves a request from a client. Connects with client, waits for
@@ -85,40 +122,19 @@ public class Server
 				                    ioe );
 		}
 
-		try                                       //create io streams
-		{
-		        createIOStreams();
-		}
-		catch( IOException ioe )
-		{
-                        throw new RuntimeException( "Failed to create streams!",
-				                    ioe );
-		}
-
 		try
 		{
-			//get request from client
-			String request = this.in.readLine();
-			System.out.println( "Got request from client " +
-					    request + " ." );
-                }
+		        processRequests();                //process client
+		                                          //requests
+		}
 		catch ( IOException ioe )
 		{
-                        throw new RuntimeException( "Failed to read request",
-				                    ioe );
+                        throw new RuntimeException( "Failed to process request!"
+				                    , ioe );
 		}
 
-		//send reply to client
-		String response = "You made a request to port " + port + " at "
-			+ LocalTime.now();
-                this.out.println( response );
-
-		try
+		try                                       //close socket
 		{
-			//close in and out
-			this.in.close();
-			this.out.close();
-
 			//close socket
 			this.server_socket.close();
 		}
