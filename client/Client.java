@@ -41,9 +41,9 @@ public class Client
 	private void createSocket() throws RuntimeException
 	{
 		//create socket bound to port
-                try
+        try
 		{
-                        this.socket = new Socket( this.host, this.port );
+            this.socket = new Socket( this.host, this.port );
 		}
 		catch ( UnknownHostException uhe )
 		{
@@ -152,7 +152,7 @@ public class Client
 
 		try
 		{
-                        Client client = new Client( "localhost", 8000 );
+                        Client client = new Client( "localhost", 9000 );
 			client.makeRequest();
 		}
 		catch ( RuntimeException re )

@@ -1,5 +1,7 @@
 package server;
 
+import server.ClientHandler;
+
 //libraries for sockets
 import java.io.*;
 import java.net.*;
@@ -13,15 +15,13 @@ import java.time.LocalTime;
  *
  * By Jacqueline W.
  */
-public class Server
+public class Server implements Runnable
 {
-        private int port;                                 //port the server uses
+    private int port;                                 //port the server uses
+    private boolean is_stopped = false;
 	
 	private ServerSocket server_socket = null;        //socket for port
-	private Socket client_socket = null;              //socket for client
-	
-	private BufferedReader in = null;                 //in stream
-	private PrintWriter out = null;                   //out stream
+    private int client_number = 0;                    //identifier for client
 
 	/* Constructor
 	 * ===========
@@ -29,79 +29,55 @@ public class Server
 	 */
         public Server( int port )
 	{
-                this.port = port;
-
-		
+        this.port = port;	
 	}
+
+    private void stop()
+    {
+        System.out.println( "INFO: Stopping server..." );
+        this.is_stopped = true;
+        
+        try
+        {
+            this.server_socket.close();
+        }
+        catch ( IOException ioe )
+        {
+            throw new RuntimeException( "ERROR: Failed to close server!", ioe );
+        }
+
+        System.out.println( "INFO: Closed socket..." );
+    }
+
+    private boolean isStopped()
+    {
+        return this.is_stopped;
+    }
 
 	/* createSockets() : PRIVATE
 	 * =========================
 	 * Creates the server socket and the client socket. Throws IOException
 	 * on error.
 	 */
-	private void createSockets() throws IOException
+	private Socket createSockets() throws IOException
 	{
 		//create socket bound to port
-                this.server_socket = new ServerSocket( this.port );
+        try
+        {
+            this.server_socket = new ServerSocket( this.port );
+        }
+        catch ( BindException be )
+        {
+            be.printStackTrace();
+        }
 		//block until connection is made with client
-		this.client_socket = this.server_socket.accept();
+		Socket client_socket = this.server_socket.accept();
+        this.client_number++;
 
-		System.out.println( "Accepted client " +
-				    this.client_socket.getInetAddress() );
-	}
+		System.out.println( this.client_number + ":Accepted client " +
+				            client_socket.getInetAddress() );
 
-	/* createIOStreams() : PRIVATE
-	 * =========================
-	 * Creates the IO streams for the server. Input is initialized as a
-	 * BufferedReader, output is initialized as a PrintWriter.
-	 * Throws IOException on error.
-	 */
-	private void createIOStreams() throws IOException
-	{
-                //create IO streams for in and out
-		InputStreamReader in_stream = null;
-		in_stream = new InputStreamReader( client_socket.getInputStream() );
-		
-		this.in = new BufferedReader( in_stream );
-		this.out = new PrintWriter( client_socket.getOutputStream(),
-					    true ); //flushing not buffered
-	}
-
-	/* processRequests()
-	 * =================
-	 * Creates IO streams and processes requests from client until the
-	 * socket is no longer connected, then closes the IO streams.
-	 */
-	private void processRequests() throws IOException
-	{
-		createIOStreams();
-
-		boolean keepRunning = true;
-		while ( keepRunning )
-		{
-			
-			//get request from client
-			String request = this.in.readLine();
-			
-			//check whether socket is still connected
-			if( request == null )
-			{
-			        keepRunning = false;
-			}
-			
-			System.out.println( "Got request from client " +
-					    request + " ." );
-
-
-			//send reply to client
-			String response = "You made a request to port "
-				          + port + " at " + LocalTime.now();
-			this.out.println( response );
-		}
-
-		//close in and out
-		this.in.close();
-		this.out.close();
+        return client_socket;
 	}
 
 	/* serveRequest() : PRIVATE
@@ -109,41 +85,34 @@ public class Server
 	 * Serves a request from a client. Connects with client, waits for
 	 * request from client.
 	 */
-	private void serveRequest() throws RuntimeException
+	private void serveRequest() throws IOException
 	{
-                
-                try                                       //create sockets
-		{
-			createSockets();
-		}
-		catch ( IOException ioe )
-		{
-                        throw new RuntimeException( "Failed to create socket!",
-				                    ioe );
-		}
+        Socket client_socket = null;        
+        while ( !isStopped() )
+        {
+            client_socket = createSockets();
 
-		try
-		{
-		        processRequests();                //process client
-		                                          //requests
-		}
-		catch ( IOException ioe )
-		{
-                        throw new RuntimeException( "Failed to process request!"
-				                    , ioe );
-		}
-
-		try                                       //close socket
-		{
-			//close socket
-			this.server_socket.close();
-		}
-		catch ( IOException ioe )
-		{
-                        throw new RuntimeException( "Failed to close clean!",
-				                    ioe );
-		}
+		    //create new client handler to process requests
+            ClientHandler handler = new ClientHandler( client_socket,
+                                                       this.port,
+                                                       this.client_number );
+            //create new thread for client handler
+            new Thread( handler ).start();
+        }
 	}
+
+    @Override
+    public void run()
+    {
+        try
+        {
+            serveRequest();
+        }
+        catch ( IOException ioe )
+        {
+            throw new RuntimeException( "ERROR: dealing with IO on socket", ioe );
+        }
+    }
 
 	/* main() : PUBLIC
 	 * ===============
@@ -151,16 +120,9 @@ public class Server
 	 */
 	public static void main( String[] args )
 	{
-                System.out.println( "Starting socket-based server..." );
+        System.out.println( "Starting socket-based server..." );
 		
-		Server server = new Server( 8000 );       //uses port 8000
-		try
-		{
-                        server.serveRequest();
-		}
-		catch ( RuntimeException re )
-		{
-                        System.out.println( "Could not serve request!\n" + re );
-		}
+		Server server = new Server( 9000 );       //uses port 9000
+	    new Thread( server ).start();
 	}
 }
